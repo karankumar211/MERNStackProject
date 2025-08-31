@@ -1,0 +1,4 @@
+/* client/src/index.css */
+
+@tailwind utilities;
+@import "tailwindcss";
