@@ -55,10 +55,41 @@ main .left .review {
   border-radius: 0.7rem;
 }
 
-
 main .right {
   background-color: #343434;
   padding: 1rem 2rem;
   font-size: 1.5rem;
   overflow: auto;
+  color: #fff;
+}
+
+.loading {
+  color: #a0a0ff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  animation: pulse 1.5s infinite;
+}
+
+.error {
+  color: #ff6b6b;
+  font-size: 1.2rem;
+  padding: 1rem;
+  border: 1px solid #ff6b6b;
+  border-radius: 0.5rem;
+  background-color: rgba(255, 107, 107, 0.1);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }

@@ -1,105 +1,88 @@
-// Make sure to load environment variables at the very start of your app
-require('dotenv').config();
+require("dotenv").config();
+const OpenAI = require("openai");
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+// Initialize OpenAI with API key
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// 1. Get the API key from environment variables
-const apiKey = process.env.GOOGLE_GEMINI_KEY;
-if (!apiKey) {
-    throw new Error("GOOGLE_GEMINI_KEY is not set in the environment variables.");
-}
-
-// 2. Initialize the Generative AI client
-const genAI = new GoogleGenerativeAI(apiKey);
-
-// 3. Use the correct and valid model name
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest', 
-    systemInstruction:  `
-                Here’s a solid system instruction for your AI code reviewer:
-
-                AI System Instruction: Senior Code Reviewer (7+ Years of Experience)
-
-                Role & Responsibilities:
-
-                You are an expert code reviewer with 7+ years of development experience. Your role is to analyze, review, and improve code written by developers. You focus on:
-                	•	Code Quality :- Ensuring clean, maintainable, and well-structured code.
-                	•	Best Practices :- Suggesting industry-standard coding practices.
-                	•	Efficiency & Performance :- Identifying areas to optimize execution time and resource usage.
-                	•	Error Detection :- Spotting potential bugs, security risks, and logical flaws.
-                	•	Scalability :- Advising on how to make code adaptable for future growth.
-                	•	Readability & Maintainability :- Ensuring that the code is easy to understand and modify.
-
-                Guidelines for Review:
-                	1.	Provide Constructive Feedback :- Be detailed yet concise, explaining why changes are needed.
-                	2.	Suggest Code Improvements :- Offer refactored versions or alternative approaches when possible.
-                	3.	Detect & Fix Performance Bottlenecks :- Identify redundant operations or costly computations.
-                	4.	Ensure Security Compliance :- Look for common vulnerabilities (e.g., SQL injection, XSS, CSRF).
-                	5.	Promote Consistency :- Ensure uniform formatting, naming conventions, and style guide adherence.
-                	6.	Follow DRY (Don’t Repeat Yourself) & SOLID Principles :- Reduce code duplication and maintain modular design.
-                	7.	Identify Unnecessary Complexity :- Recommend simplifications when needed.
-                	8.	Verify Test Coverage :- Check if proper unit/integration tests exist and suggest improvements.
-                	9.	Ensure Proper Documentation :- Advise on adding meaningful comments and docstrings.
-                	10.	Encourage Modern Practices :- Suggest the latest frameworks, libraries, or patterns when beneficial.
-
-                Tone & Approach:
-                	•	Be precise, to the point, and avoid unnecessary fluff.
-                	•	Provide real-world examples when explaining concepts.
-                	•	Assume that the developer is competent but always offer room for improvement.
-                	•	Balance strictness with encouragement :- highlight strengths while pointing out weaknesses.
-
-                Output Example:
-
-                ❌ Bad Code:
-                \`\`\`javascript
-                                function fetchData() {
-                    let data = fetch('/api/data').then(response => response.json());
-                    return data;
-                }
-
-                    \`\`\`
-
-                🔍 Issues:
-                	•	❌ fetch() is asynchronous, but the function doesn’t handle promises correctly.
-                	•	❌ Missing error handling for failed API calls.
-
-                ✅ Recommended Fix:
-
-                        \`\`\`javascript
-                async function fetchData() {
-                    try {
-                        const response = await fetch('/api/data');
-                        if (!response.ok) throw new Error("HTTP error! Status: $\{response.status}");
-                        return await response.json();
-                    } catch (error) {
-                        console.error("Failed to fetch data:", error);
-                        return null;
-                    }
-                }
-                   \`\`\`
-
-                💡 Improvements:
-                	•	✔ Handles async correctly using async/await.
-                	•	✔ Error handling added to manage failed requests.
-                	•	✔ Returns null instead of breaking execution.
-
-                Final Note:
-
-                Your mission is to ensure every piece of code follows high standards. Your reviews should empower developers to write better, more efficient, and scalable code while keeping performance, security, and maintainability in mind.
-
-                Would you like any adjustments based on your specific needs? 🚀 
-    `
- });
+// Model to use (gpt-4 is best for code review, fall back to gpt-3.5-turbo if needed)
+const MODEL = process.env.OPENAI_MODEL || "gpt-4";
 
 /**
- * Generates content based on a given prompt.
- * @param {string} prompt - The user's prompt.
- * @returns {Promise<string>} The generated text from the model.
+ * Generate a code review using OpenAI
+ * @param {string} code - The code to review
+ * @returns {Promise<string>} The review text in markdown format
  */
-// 4. Corrected function name typo (generateContenet -> generateContent)
-async function generateContent(prompt) {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+async function generateContent(code) {
+  try {
+    const systemPrompt = `You are an expert software developer conducting a thorough code review. 
+Your task is to analyze the code and provide detailed, constructive feedback in markdown format.
+Include code examples when suggesting improvements.`;
+
+    const userPrompt = `Please review this code and provide a detailed analysis:
+
+\`\`\`
+${code}
+\`\`\`
+
+Focus on:
+1. Code Quality
+   - Clean code principles
+   - Design patterns
+   - Naming conventions
+   - Code organization
+2. Potential Bugs
+   - Logic errors
+   - Edge cases
+   - Error handling
+3. Performance
+   - Algorithmic efficiency
+   - Resource usage
+   - Bottlenecks
+4. Security
+   - Common vulnerabilities
+   - Data validation
+   - Security best practices
+5. Improvements
+   - Specific suggestions with examples
+   - Modern practices
+   - Maintainability tips
+
+Format your response in clear markdown with sections.`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 2048,
+      top_p: 1,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+    });
+
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error("No response from OpenAI");
+    }
+
+    return response.choices[0].message.content;
+  } catch (error) {
+    console.error("Error generating code review:", error);
+
+    // Provide a user-friendly error message
+    const errorMessage = error.response?.data?.error?.message || error.message;
+    return `⚠️ Unable to generate code review: ${errorMessage}
+
+Please ensure:
+1. Your OpenAI API key is correctly set in the environment variables
+2. You have sufficient API credits
+3. The API is currently available
+
+If the problem persists, please try again later or contact support.`;
+  }
 }
 
 module.exports = { generateContent };
