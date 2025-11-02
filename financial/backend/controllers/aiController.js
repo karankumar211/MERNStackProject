@@ -57,12 +57,10 @@ export const getAiChatResponse = async (req, res) => {
     res.status(200).json({ reply: "Test successful" });
   } catch (error) {
     console.error("Error communicating with Gemini AI:", error);
-    res
-      .status(500)
-      .json({
-        message:
-          "I'm having trouble connecting to my AI brain right now. Please try again later.",
-      });
+    res.status(500).json({
+      message:
+        "I'm having trouble connecting to my AI brain right now. Please try again later.",
+    });
   }
 };
 
