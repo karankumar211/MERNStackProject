@@ -1,87 +1,66 @@
 require("dotenv").config();
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Initialize OpenAI with API key
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize the API with the key from environment
+const apiKey = process.env.GOOGLE_GEMINI_KEY;
+if (!apiKey) {
+  throw new Error("GOOGLE_GEMINI_KEY environment variable is not set");
+}
 
-// Model to use (gpt-4 is best for code review, fall back to gpt-3.5-turbo if needed)
-const MODEL = process.env.OPENAI_MODEL || "gpt-4";
+// Initialize the AI client
+const genAI = new GoogleGenerativeAI(apiKey);
+
+// Get the model (gemini-pro is best for code)
+const modelName = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash";
+const model = genAI.getGenerativeModel({ model: modelName });
 
 /**
- * Generate a code review using OpenAI
+ * Generate a code review using Gemini AI
  * @param {string} code - The code to review
  * @returns {Promise<string>} The review text in markdown format
  */
 async function generateContent(code) {
   try {
-    const systemPrompt = `You are an expert software developer conducting a thorough code review. 
-Your task is to analyze the code and provide detailed, constructive feedback in markdown format.
-Include code examples when suggesting improvements.`;
-
-    const userPrompt = `Please review this code and provide a detailed analysis:
+    const prompt = `As an expert code reviewer, please analyze this code and provide detailed feedback in markdown format:
 
 \`\`\`
 ${code}
 \`\`\`
 
-Focus on:
-1. Code Quality
+Please provide a comprehensive review focusing on:
+1. Code Quality and Best Practices
    - Clean code principles
+   - Naming and organization
    - Design patterns
-   - Naming conventions
-   - Code organization
-2. Potential Bugs
+2. Potential Issues
    - Logic errors
    - Edge cases
    - Error handling
-3. Performance
-   - Algorithmic efficiency
+3. Performance Considerations
+   - Efficiency
    - Resource usage
-   - Bottlenecks
-4. Security
-   - Common vulnerabilities
+4. Security Concerns
+   - Vulnerabilities
    - Data validation
-   - Security best practices
-5. Improvements
-   - Specific suggestions with examples
-   - Modern practices
-   - Maintainability tips
+5. Improvement Suggestions
+   - Code examples
+   - Modern alternatives
 
-Format your response in clear markdown with sections.`;
+Format your response in clear markdown sections.`;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2048,
-      top_p: 1,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-    });
-
-    if (!response.choices || response.choices.length === 0) {
-      throw new Error("No response from OpenAI");
-    }
-
-    return response.choices[0].message.content;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
   } catch (error) {
-    console.error("Error generating code review:", error);
-
-    // Provide a user-friendly error message
-    const errorMessage = error.response?.data?.error?.message || error.message;
-    return `⚠️ Unable to generate code review: ${errorMessage}
+    console.error("Error generating AI response:", error);
+    return `⚠️ Unable to generate code review: ${error.message}
 
 Please ensure:
-1. Your OpenAI API key is correctly set in the environment variables
-2. You have sufficient API credits
-3. The API is currently available
+1. Your Google Gemini API key is correctly set in GOOGLE_GEMINI_KEY
+2. You have API access enabled
+3. The service is available
 
-If the problem persists, please try again later or contact support.`;
+If the problem persists, please check your API configuration or try again later.`;
   }
 }
 
