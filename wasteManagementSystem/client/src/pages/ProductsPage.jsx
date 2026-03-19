@@ -1,48 +1,63 @@
-// client/src/pages/ProductsPage.jsx
-
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { getProducts } from '../api/ProductApi'; 
 import ProductCard from '../components/ProductCard';
-
 const ProductsPage = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [products, setProducts] = useState(null); 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchProduct = async () => { 
+    setLoading(true);
+    setError(null); 
+    try { 
+      const data = await getProducts(); 
+      
+      setProducts(data);
+    } catch (err) {
+      setError("Failed to fetch products. Check your connection.");
+      console.error("Fetch Error:", err);
+    } finally { 
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { 
+    fetchProduct();
+  }, []); 
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get('http://localhost:5000/api/products');
-        setProducts(res.data);
-      } catch (err) {
-        setError('Failed to fetch products. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []); // The empty array ensures this effect runs only once when the component mounts
-
-  if (loading) {
-    return <div className="text-center p-10">Loading products...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center p-10 text-red-500">{error}</div>;
-  }
+    if (products) {
+      console.log("State updated with products:", products);
+    }
+  }, [products]);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold text-center my-6">Our Recycled Products</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product._id} product={product} />
-        ))}
-      </div>
+    <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
+      <h1>Product Catalog</h1>
+      
+      {loading && <p>Searching for items...</p>}
+      
+      {error && (
+        <div style={{ color: "red", marginBottom: "10px" }}>
+          {error}
+          <button onClick={fetchProduct} style={{ marginLeft: "10px" }}>Retry</button>
+        </div>
+      )}
+
+      {products && (
+        <div style={gridStyle}>
+          {products.map((item) => (
+            <ProductCard key={item.id} product={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
-
+ const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+  gap: "20px",
+  padding: "20px 0",
+};
 export default ProductsPage;

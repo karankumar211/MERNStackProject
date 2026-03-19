@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
-
+import { register } from '../api/authApi';
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -38,12 +38,10 @@ const RegisterPage = () => {
         },
       };
       const body = JSON.stringify(newUser);
-      // Make sure your backend server is running on port 5000
-      const res = await axios.post('http://localhost:5000/api/auth/register', body, config);
+
+      const response = await register(  name , email , password , role );
+      localStorage.setItem('token', response.token);
       
-      console.log(res.data); // For debugging
-      setLoading(false);
-      // Redirect to login page after successful registration
       navigate('/login');
 
     } catch (err) {

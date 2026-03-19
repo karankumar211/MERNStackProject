@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
-
+import { login } from '../api/authApi';
 const LoginPage = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -30,16 +30,11 @@ const LoginPage = () => {
         },
       };
       const body = JSON.stringify({ email, password });
-      // Make sure your backend server is running on port 5000
-      const res = await axios.post('http://localhost:5000/api/auth/login', body, config);
       
-      console.log(res.data); // For debugging
-      setLoading(false);
+      const response = await login(email, password);
+      localStorage.setItem('token', response.token);
 
-      // IMPORTANT: In a real app, you would save the received token (JWT) here
-      // to local storage or context state to keep the user logged in.
 
-      // For now, just redirect to the home page on successful login.
       navigate('/');
 
     } catch (err) {
